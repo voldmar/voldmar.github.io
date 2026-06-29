@@ -6,6 +6,19 @@ serve:
 status:
     git status --short
 
+build:
+    just check
+
+update-site message="Update site":
+    just build
+    git add -A
+    if git diff --cached --quiet; then \
+        echo "No changes to publish."; \
+    else \
+        git commit -m "{{message}}"; \
+        git push origin main; \
+    fi
+
 check:
     #!/usr/bin/env python3
     from html.parser import HTMLParser
