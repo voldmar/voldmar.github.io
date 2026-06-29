@@ -171,6 +171,33 @@ h1 {
   margin-bottom: var(--space-3);
   color: var(--ink);
 }
+.project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--rule-2);
+  text-decoration: none;
+}
+.project-card:hover .project-title { text-decoration-color: currentColor; }
+.project-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+.project-meta {
+  color: var(--ink-3);
+  max-width: 42ch;
+}
 .empty {
   color: var(--ink-3);
   font-style: normal;

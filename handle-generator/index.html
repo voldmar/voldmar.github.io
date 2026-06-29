@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handle Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
+<style>
+  :root {
+    --workbench: oklch(98% 0.005 250);
+    --canvas-deep: oklch(94% 0.005 250);
+    --panel: oklch(96% 0.005 250);
+    --hairline: oklch(85% 0.005 250);
+    --ink: oklch(20% 0.005 250);
+    --ink-muted: oklch(50% 0.005 250);
+    --handle-fill: oklch(22% 0.005 250);
+    --accent: oklch(50% 0.18 250);
+    --accent-tint: oklch(95% 0.04 250);
+    --accent-tint-hover: oklch(92% 0.05 250);
+    --spring: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--workbench);
+    color: var(--ink);
+    font: 400 14px/1.5 "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "tnum" 1, "cv11" 1;
+  }
+  .app { display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
+  .controls {
+    background: var(--panel);
+    padding: 20px 24px 24px;
+    overflow: auto;
+    border-right: 1px solid var(--hairline);
+  }
+  h1 {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    margin: 0 0 20px;
+  }
+  .group { margin: 0 0 16px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .row .v {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* range slider */
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--hairline);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--ink);
+    border: 2px solid var(--hairline);
+    border-radius: 50%;
+    transition: transform 150ms var(--spring), border-color 200ms var(--spring), box-shadow 200ms var(--spring);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--ink);
+    border: 2px solid var(--hairline);
+    border-radius: 50%;
+    transition: transform 150ms var(--spring), border-color 200ms var(--spring), box-shadow 200ms var(--spring);
+  }
+  input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.125); border-color: var(--accent); }
+  input[type=range]:hover::-moz-range-thumb { transform: scale(1.125); border-color: var(--accent); }
+  input[type=range]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px var(--workbench), 0 0 0 6px var(--accent);
+    border-color: var(--accent);
+  }
+  input[type=range]:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 4px var(--workbench), 0 0 0 6px var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* radio group */
+  .radios { display: flex; gap: 8px; }
+  .radios label {
+    flex: 1;
+    text-align: center;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 0;
+    transition: border-color 120ms var(--spring), background 120ms var(--spring), color 120ms var(--spring), box-shadow 200ms var(--spring);
+  }
+  .radios input { position: absolute; opacity: 0; pointer-events: none; }
+  .radios label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+    color: var(--accent);
+  }
+  .radios label:has(input:focus-visible) {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .radios label:has(input:checked):hover {
+    box-shadow: 0 1px 0 oklch(70% 0.02 250);
+  }
+
+  /* primary button */
+  button.exp {
+    width: 100%;
+    padding: 10px 16px;
+    margin-top: 6px;
+    background: var(--accent-tint);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    font: 500 14px/1.5 "Inter", system-ui, sans-serif;
+    transition: transform 80ms var(--spring), background 200ms var(--spring), box-shadow 200ms var(--spring);
+  }
+  button.exp:hover {
+    background: var(--accent-tint-hover);
+    box-shadow: 0 1px 0 oklch(70% 0.02 250);
+  }
+  button.exp:active { transform: scale(0.99); }
+  button.exp:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .note {
+    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+    border-top: 1px solid var(--hairline);
+    margin-top: 20px;
+    padding-top: 12px;
+  }
+
+  .preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: hidden;
+  }
+  .preview svg {
+    max-width: 100%;
+    max-height: 100%;
+    background: var(--canvas-deep);
+    border-radius: 8px;
+    border: 1px solid var(--hairline);
+  }
+  .preview path {
+    fill: none;
+    stroke: var(--handle-fill);
+    stroke-width: 0.25;
+    fill-rule: evenodd;
+  }
+
+  /* responsive: collapse to single column under 760px */
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .controls { max-height: 46vh; border-right: none; border-bottom: 1px solid var(--hairline); }
+  }
+
+  /* reduced motion: kill non-essential transitions and transforms */
+  @media (prefers-reduced-motion: reduce) {
+    input[type=range]::-webkit-slider-thumb,
+    input[type=range]::-moz-range-thumb,
+    .radios label,
+    button.exp { transition: none; }
+    input[type=range]:hover::-webkit-slider-thumb,
+    input[type=range]:hover::-moz-range-thumb { transform: none; }
+    button.exp:active { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="controls">
+    <h1>Handle Editor</h1>
+    <p class="sub">Cross / star knob grip. Exports laser-cut SVG (mm).</p>
+
+    <div class="group">
+      <label>Arm count</label>
+      <div class="radios" id="armCount">
+        <label><input type="radio" name="ac" value="3"><span>3</span></label>
+        <label><input type="radio" name="ac" value="4" checked><span>4</span></label>
+        <label><input type="radio" name="ac" value="5"><span>5</span></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>Hole shape</label>
+      <div class="radios" id="holeShape">
+        <label><input type="radio" name="hs" value="round" checked><span>Round</span></label>
+        <label><input type="radio" name="hs" value="square"><span>Square</span></label>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="holeD">Hole diameter</label><span class="v" id="holeDV">26 mm</span></div>
+      <input type="range" id="holeD" min="10" max="50" step="1" value="26">
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="armWidth">Arm width</label><span class="v" id="armWidthV">40 mm</span></div>
+      <input type="range" id="armWidth" min="30" max="60" step="1" value="40">
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="size">Overall size</label><span class="v" id="sizeV">200 mm</span></div>
+      <input type="range" id="size" min="150" max="300" step="1" value="200">
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="valleyD">Valley diameter</label><span class="v" id="valleyDV">20 mm</span></div>
+      <input type="range" id="valleyD" min="10" max="30" step="1" value="20">
+    </div>
+
+    <div class="group">
+      <div class="row"><label for="valleyH">Valley-to-hole</label><span class="v" id="valleyHV">22 mm</span></div>
+      <input type="range" id="valleyH" min="15" max="30" step="1" value="22">
+    </div>
+
+    <button class="exp" id="export">Export SVG</button>
+
+    <p class="note">
+      Center hole: configurable (Ø 10–50 mm, round or square with fixed 3 mm dogbone reliefs). Units: mm, 1:1.
+      "Valley-to-hole" = distance from the hole envelope to the arm-root (valley rim).
+      Max-width position auto-adjusts with arm width and overall size.
+    </p>
+  </aside>
+
+  <main class="preview"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></main>
+</div>
+
+<script>
+"use strict";
+// ---------- geometry helpers ----------
+const rot = (x, y, a) => { const c = Math.cos(a), s = Math.sin(a); return [x*c - y*s, x*s + y*c]; };
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+const SQUARE_RELIEF_RADIUS = 3;
+function holeClearanceRadius(p) {
+  if (p.holeShape !== 'square') return p.holeDiameter / 2;
+  return Math.SQRT2 * (p.holeDiameter / 2) + SQUARE_RELIEF_RADIUS;
+}
+// cubic Bezier (4 control points)
+function cubic(p0, p1, p2, p3, t) {
+  const o = 1-t;
+  return [o*o*o*p0[0]+3*o*o*t*p1[0]+3*o*t*t*p2[0]+t*t*t*p3[0],
+          o*o*o*p0[1]+3*o*o*t*p1[1]+3*o*t*t*p2[1]+t*t*t*p3[1]];
+}
+
+// ---------- core: paddle-arm star knob (matches handle.svg style) ----------
+// Each arm: subtle-widening edge (root -> nose) + broad rounded cubic nose (nose -> tip).
+// Valley: cubic between armpits, G1 tangents matching the arm edges. All junctions G1.
+// xRoot is driven by the valley params (not W) so the max-width (nose-start) position moves
+// outward when arm width decreases or overall size increases (per spec).
+function computeOutline(p) {
+  const N = p.armCount, W = p.armWidth, R = p.overallSize / 2, beta = Math.PI / N;
+  const phi = clamp(beta*(0.80 - 0.20*(p.valleyDiameter - 10)/20), 0.30*beta, 0.85*beta);
+  const rBottom0 = holeClearanceRadius(p) + p.valleyToHole, rv = p.valleyDiameter / 2;
+  let xRoot = (rBottom0 + rv) * Math.cos(beta);          // armpit x (valley-driven, W-independent)
+  if (xRoot > 0.88*R) xRoot = 0.88*R;
+  const wRootValley = xRoot * Math.tan(phi);
+  const tMax = clamp(0.5 + 0.008*(40 - W), 0.25, 0.75);   // nose-start fraction; rises as W falls
+  let rNose = xRoot + tMax*(R - xRoot);
+  rNose = clamp(rNose, xRoot + 0.15*(R - xRoot), 0.95*R);
+  const halfW = Math.min(W/2, 0.85*rNose*Math.tan(beta)); // nose half-width, sector-clamped
+  const wRoot = Math.min(0.95*halfW, wRootValley);        // root half-width (paddle, valley-limited)
+
+  // valley cubic from P0 (arm0 +w root) to P1 (mirror across bisector), G1 at both armpits
+  const rArmpit = Math.hypot(xRoot, wRoot), alpha = Math.atan2(wRoot, xRoot);
+  const chordMidR = rArmpit*Math.cos(beta - alpha), chordLen = 2*rArmpit*Math.sin(beta - alpha);
+  let rBottom = Math.max(rBottom0, chordMidR - 0.35*chordLen);
+  if (rBottom >= chordMidR - 1.5) rBottom = chordMidR - 1.5;  // keep a visible concave dip
+  let L = (chordMidR - rBottom)/(0.75*Math.cos(beta));        // valley tangent length
+  if (p.holeShape === 'square') L *= 1.35;                     // soften armpits around the larger dogbone envelope
+  L = clamp(L, 0, (p.holeShape === 'square' ? 0.75 : 0.6)*chordLen); // cap to avoid looping
+
+  const span = rNose - xRoot, nose = R - rNose, Ns = 32;
+  // edge A out (upper, -w): root -> nose, horizontal tangents (gentle widening)
+  const eA = [[xRoot,-wRoot],[xRoot+0.4*span,-wRoot],[rNose-0.4*span,-halfW],[rNose,-halfW]];
+  // nose A: nose -> tip, horizontal start tangent (G1 w/ edge), vertical end tangent (G1 w/ centerline)
+  const nA = [[rNose,-halfW],[rNose+0.45*nose,-halfW],[R,-0.72*halfW],[R,0]];
+  // nose B (mirror): tip -> nose
+  const nB = [[R,0],[R,0.72*halfW],[rNose+0.45*nose,halfW],[rNose,halfW]];
+  // edge B in (lower, +w): nose -> root
+  const eB = [[rNose,halfW],[rNose-0.4*span,halfW],[xRoot+0.4*span,wRoot],[xRoot,wRoot]];
+  // valley P0 -> P1; tangent at P0 is -x (matches edge B arrival), at P1 is +arm1-dir (matches next edge A)
+  const P0 = [xRoot, wRoot], P1 = rot(xRoot, -wRoot, 2*beta);
+  const vC1 = [xRoot - L, wRoot];
+  const t1x = Math.cos(2*beta), t1y = Math.sin(2*beta);
+  const vC2 = [P1[0] - L*t1x, P1[1] - L*t1y];
+
+  const tile = [];
+  for (let i = 0; i <= Ns; i++) tile.push(cubic(eA[0],eA[1],eA[2],eA[3], i/Ns));
+  for (let i = 1; i <= Ns; i++) tile.push(cubic(nA[0],nA[1],nA[2],nA[3], i/Ns));
+  for (let i = 1; i <= Ns; i++) tile.push(cubic(nB[0],nB[1],nB[2],nB[3], i/Ns));
+  for (let i = 1; i <= Ns; i++) tile.push(cubic(eB[0],eB[1],eB[2],eB[3], i/Ns));
+  for (let i = 1; i <= Ns; i++) tile.push(cubic(P0, vC1, vC2, P1, i/Ns));
+
+  // normalize so the farthest point = R (honor overall size exactly; nose cubic can bulge ~2%)
+  let rmax = 0; for (const [x, y] of tile) rmax = Math.max(rmax, Math.hypot(x, y));
+  const sc = rmax > R ? R/rmax : 1;
+  // assemble N rotated copies (drop the first point of copies k>0 to avoid the duplicate at P1)
+  const outline = [];
+  for (let k = 0; k < N; k++) {
+    const a = 2*Math.PI * k / N, slice = k === 0 ? tile : tile.slice(1);
+    for (const [x, y] of slice) outline.push(rot(x*sc, y*sc, a));
+  }
+  return { outline, hole: { shape: p.holeShape, diameter: p.holeDiameter }, rNose, halfW };
+}
+
+// ---------- path string ----------
+function polyPath(pts) {
+  let d = `M ${f(pts[0][0])} ${f(pts[0][1])}`;
+  for (let i = 1; i < pts.length; i++) d += ` L ${f(pts[i][0])} ${f(pts[i][1])}`;
+  return d + " Z";
+}
+function circlePath(r) {
+  return `M ${f(r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(-r)} 0 A ${f(r)} ${f(r)} 0 1 0 ${f(r)} 0 Z`;
+}
+function dogboneSquarePath(diameter, reliefRadius = SQUARE_RELIEF_RADIUS) {
+  const s = diameter / 2;
+  const r = Math.min(Math.max(reliefRadius, 0), s);
+  const angle = Math.PI / 4;
+  const pt = (x, y) => {
+    const [rx, ry] = rot(x, y, angle);
+    return `${f(rx)} ${f(ry)}`;
+  };
+  if (r === 0) {
+    return `M ${pt(-s, -s)} L ${pt(s, -s)} L ${pt(s, s)} L ${pt(-s, s)} Z`;
+  }
+  return `M ${pt(-s + r, -s)} ` +
+         `L ${pt(s - r, -s)} ` +
+         `A ${f(r)} ${f(r)} 0 1 1 ${pt(s, -s + r)} ` +
+         `L ${pt(s, s - r)} ` +
+         `A ${f(r)} ${f(r)} 0 1 1 ${pt(s - r, s)} ` +
+         `L ${pt(-s + r, s)} ` +
+         `A ${f(r)} ${f(r)} 0 1 1 ${pt(-s, s - r)} ` +
+         `L ${pt(-s, -s + r)} ` +
+         `A ${f(r)} ${f(r)} 0 1 1 ${pt(-s + r, -s)} Z`;
+}
+const f = n => (Math.round(n * 1000) / 1000).toString();
+
+function buildPathD(g) {
+  const hole = g.hole.shape === 'square'
+    ? dogboneSquarePath(g.hole.diameter)
+    : circlePath(g.hole.diameter / 2);
+  return polyPath(g.outline) + " " + hole;
+}
+
+// ---------- dimension annotations (technical-drawing style) ----------
+const dimMarker = `<marker id="dim-arrow" markerUnits="userSpaceOnUse" markerWidth="3" markerHeight="3" refX="1.5" refY="1.5" orient="auto"><line x1="0" y1="3" x2="3" y2="0" stroke="oklch(50% 0.18 250)" stroke-width="0.2"/></marker>`;
+function buildDimensions(p, g) {
+  const R = p.overallSize / 2;
+  const rNose = g.rNose;
+  const halfW = g.halfW;
+  const off = Math.max(R * 0.08, 3); // gap from feature to dimension line
+  const ACCENT = 'oklch(50% 0.18 250)';
+  const TS = 3.5; // text size in mm
+  const SW = 0.2; // stroke width
+  const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+  let d = '';
+  // overall size — above the handle
+  d += `<g stroke="${ACCENT}" stroke-width="${SW}" fill="none">`;
+  d += `<line x1="${f(-R)}" y1="${f(-R - off)}" x2="${f(R)}" y2="${f(-R - off)}" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>`;
+  d += `<line x1="${f(-R)}" y1="${f(-R)}" x2="${f(-R)}" y2="${f(-R - off + 1)}"/>`;
+  d += `<line x1="${f(R)}" y1="${f(-R)}" x2="${f(R)}" y2="${f(-R - off + 1)}"/>`;
+  d += `</g><text x="0" y="${f(-R - off - 1.5)}" text-anchor="middle" font-size="${TS}" font-family="${FONT}" fill="${ACCENT}">${p.overallSize} mm</text>`;
+  // arm width — right of the rightmost arm
+  d += `<g stroke="${ACCENT}" stroke-width="${SW}" fill="none">`;
+  d += `<line x1="${f(rNose + off)}" y1="${f(-halfW)}" x2="${f(rNose + off)}" y2="${f(halfW)}" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>`;
+  d += `<line x1="${f(rNose)}" y1="${f(-halfW)}" x2="${f(rNose + off - 1)}" y2="${f(-halfW)}"/>`;
+  d += `<line x1="${f(rNose)}" y1="${f(halfW)}" x2="${f(rNose + off - 1)}" y2="${f(halfW)}"/>`;
+  d += `</g><text x="${f(rNose + off + 1.5)}" y="0" text-anchor="start" dominant-baseline="middle" font-size="${TS}" font-family="${FONT}" fill="${ACCENT}">${p.armWidth} mm</text>`;
+  // hole diameter — round uses a horizontal diameter; square follows the rotated side it controls
+  const holeR = p.holeDiameter / 2;
+  if (p.holeShape === 'square') {
+    const angle = Math.PI / 4;
+    const sideOffset = SQUARE_RELIEF_RADIUS + 3;
+    const [nx, ny] = rot(0, -1, angle);
+    const p0 = rot(-holeR, -holeR, angle);
+    const p1 = rot(holeR, -holeR, angle);
+    const a0 = [p0[0] + nx * sideOffset, p0[1] + ny * sideOffset];
+    const a1 = [p1[0] + nx * sideOffset, p1[1] + ny * sideOffset];
+    const tx = (a0[0] + a1[0]) / 2 + nx * (TS + 1.5);
+    const ty = (a0[1] + a1[1]) / 2 + ny * (TS + 1.5);
+    const holeLabel = `${p.holeDiameter} mm · R${SQUARE_RELIEF_RADIUS}`;
+    d += `<g stroke="${ACCENT}" stroke-width="${SW}" fill="none">`;
+    d += `<line x1="${f(a0[0])}" y1="${f(a0[1])}" x2="${f(a1[0])}" y2="${f(a1[1])}" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>`;
+    d += `<line x1="${f(p0[0])}" y1="${f(p0[1])}" x2="${f(p0[0] + nx * (sideOffset - 1))}" y2="${f(p0[1] + ny * (sideOffset - 1))}"/>`;
+    d += `<line x1="${f(p1[0])}" y1="${f(p1[1])}" x2="${f(p1[0] + nx * (sideOffset - 1))}" y2="${f(p1[1] + ny * (sideOffset - 1))}"/>`;
+    d += `</g><text x="${f(tx)}" y="${f(ty)}" text-anchor="middle" dominant-baseline="middle" font-size="${TS}" font-family="${FONT}" fill="${ACCENT}" transform="rotate(45 ${f(tx)} ${f(ty)})">${holeLabel}</text>`;
+  } else {
+    const holeY = holeR + 4;
+    d += `<g stroke="${ACCENT}" stroke-width="${SW}" fill="none">`;
+    d += `<line x1="${f(-holeR)}" y1="${f(holeY)}" x2="${f(holeR)}" y2="${f(holeY)}" marker-start="url(#dim-arrow)" marker-end="url(#dim-arrow)"/>`;
+    d += `<line x1="${f(-holeR)}" y1="0" x2="${f(-holeR)}" y2="${f(holeY - 1)}"/>`;
+    d += `<line x1="${f(holeR)}" y1="0" x2="${f(holeR)}" y2="${f(holeY - 1)}"/>`;
+    d += `</g><text x="0" y="${f(holeY + TS + 1.5)}" text-anchor="middle" font-size="${TS}" font-family="${FONT}" fill="${ACCENT}">Ø ${p.holeDiameter} mm</text>`;
+  }
+  return d;
+}
+
+// ---------- app ----------
+const params = () => ({
+  armCount: +document.querySelector('input[name="ac"]:checked').value,
+  holeShape: document.querySelector('input[name="hs"]:checked').value,
+  holeDiameter: +holeD.value,
+  armWidth: +armWidth.value,
+  overallSize: +size.value,
+  valleyDiameter: +valleyD.value,
+  valleyToHole: +valleyH.value,
+});
+
+function render() {
+  const p = params();
+  const g = computeOutline(p);
+  const R = p.overallSize / 2, m = 10;
+  const span = 2*(R + m);
+  const vb = `${-(R+m)} ${-(R+m)} ${span} ${span}`;
+  const svg = document.getElementById('svg');
+  svg.setAttribute('viewBox', vb);
+  svg.setAttribute('width', span + 'mm');
+  svg.setAttribute('height', span + 'mm');
+  svg.innerHTML = `<defs>${dimMarker}</defs><path d="${buildPathD(g)}"/>${buildDimensions(p, g)}`;
+  // value labels
+  holeDV.textContent = p.holeDiameter + ' mm';
+  armWidthV.textContent = p.armWidth + ' mm';
+  sizeV.textContent = p.overallSize + ' mm';
+  valleyDV.textContent = p.valleyDiameter + ' mm';
+  valleyHV.textContent = p.valleyToHole + ' mm';
+}
+
+function exportSVG() {
+  const p = params();
+  const g = computeOutline(p);
+  const R = p.overallSize / 2, m = 10;
+  const span = 2*(R + m);
+  const d = buildPathD(g);
+  const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="${f(span)}mm" height="${f(span)}mm" viewBox="${f(-(R+m))} ${f(-(R+m))} ${f(span)} ${f(span)}">
+<path d="${d}" fill="none" stroke="#000000" stroke-width="0.2"/>
+</svg>`;
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `handle-${p.armCount}arm-${p.overallSize}mm.svg`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// wire controls
+['holeD','armWidth','size','valleyD','valleyH'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+document.getElementById('armCount').addEventListener('change', render);
+document.querySelectorAll('#holeShape input[type="radio"]').forEach(input => {
+  input.addEventListener('change', render);
+});
+document.getElementById('export').addEventListener('click', exportSVG);
+
+// shortcut element refs used in render()
+const holeD = document.getElementById('holeD');
+const armWidth = document.getElementById('armWidth');
+const size = document.getElementById('size');
+const valleyD = document.getElementById('valleyD');
+const valleyH = document.getElementById('valleyH');
+const holeDV = document.getElementById('holeDV');
+const armWidthV = document.getElementById('armWidthV');
+const sizeV = document.getElementById('sizeV');
+const valleyDV = document.getElementById('valleyDV');
+const valleyHV = document.getElementById('valleyHV');
+
+render();
+</script>
+</body>
+</html>
