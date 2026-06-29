@@ -14,13 +14,21 @@ check:
     class Parser(HTMLParser):
         pass
 
-    for path in [Path('index.html'), Path('handle-generator/index.html')]:
+    for path in [Path('index.html'), Path('handle-generator/index.html'), Path('cat-puzzle-box/index.html')]:
         Parser().feed(path.read_text(encoding='utf-8'))
         print(f'parsed {path}')
 
     required = [
         Path('styles.css'),
         Path('handle-generator/index.html'),
+        Path('cat-puzzle-box/styles.css'),
+        Path('cat-puzzle-box/app.js'),
+        Path('cat-puzzle-box/box-svg/top.svg'),
+        Path('cat-puzzle-box/box-svg/bottom.svg'),
+        Path('cat-puzzle-box/box-svg/sides.svg'),
+        Path('cat-puzzle-box/box-svg/sandpaper-top.svg'),
+        Path('cat-puzzle-box/box-svg/sandpaper-bottom.svg'),
+        Path('cat-puzzle-box/box-svg/sandpaper-sides.svg'),
         Path('.agents/skills/impeccable/SKILL.md'),
     ]
     for path in required:
